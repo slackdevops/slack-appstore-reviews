@@ -1,0 +1,19 @@
+{
+  "name": "slack-appstore-reviews",
+  "version": "1.0.0",
+  "main": "index.js",
+  "bin": "./bin/slack-appstore-reviews",
+  "dependencies": {
+    "@slack/client": "^3.9.0",
+    "bluebird": "^3.5.0",
+    "fancy-log": "^1.3.0",
+    "fecha": "^2.3.0",
+    "got": "^6.7.1",
+    "promise.sleep": "^0.2.0",
+    "redis": "^2.7.1",
+    "unistar": "^0.1.0",
+    "xml2json": "^0.11.0"
+  },
+  "license": "Unlicense",
+  "private": true
+}

@@ -1,0 +1,78 @@
+#!/usr/bin/env node
+'use strict'
+
+const log = require('fancy-log')
+const fecha = require('fecha')
+
+const History = require('../lib/history')
+const AppStore = require('../lib/app_store')
+const Slack = require('../lib/slack')
+
+// ----------------------------------------------------------------------------
+
+const appId = process.env.APP_ID
+
+const token = process.env.SLACK_API_TOKEN
+const channel = process.env.SLACK_CHANNEL
+const botUser = {
+  username: process.env.SLACK_USERNAME || 'App Store',
+  icon_url: process.env.SLACK_ICON_URL || '',
+}
+
+const port = process.env.REDIS_PORT || 6379
+const host = process.env.REDIS_HOST || '127.0.0.1'
+const db = process.env.REDIS_DB || 0
+const prefix = process.env.REDIS_PREFIX || null
+
+const defaultAfterAt = process.env.AFTER_AT || '1970-01-01'
+
+// ----------------------------------------------------------------------------
+
+if (!appId) {
+  log.error('`APP_ID` not found')
+  process.exit(1)
+}
+
+if (!token) {
+  log.error('`SLACK_API_TOKEN` not found')
+  process.exit(1)
+}
+
+if (!channel) {
+  log.error('`SLACK_CHANNEL` not found')
+  process.exit(1)
+}
+
+// ----------------------------------------------------------------------------
+
+!async function() {
+  const appStore = new AppStore({ appId })
+  const slack = new Slack({ token, channel, botUser })
+  const history = new History({ port, host, db, prefix })
+
+  try {
+    const afterDate = await history.getAfterDate(defaultAfterAt)
+    const beforeDate = new Date()
+
+    // find reviews
+    log(`Finding reviews from ${fecha.format(afterDate, 'YYYY/MM/DD')} ` +
+        `to ${fecha.format(beforeDate, 'YYYY/MM/DD')}`)
+    const reviews = await appStore.fetch()
+
+    // filter reviews: afterDate <= x < beforeDate
+    const filteredReviews = reviews.filter(
+      review => afterDate <= review.date && review.date < beforeDate)
+    log(`Found ${filteredReviews.length} reviews`)
+
+    // post to Slack
+    log(`Posting ${filteredReviews.length} reviews`)
+    await slack.post(filteredReviews)
+
+    await history.setAfterDate(beforeDate)
+    log('Successful')
+  } finally {
+    history.quit()
+  }
+}()
+
+// vim: se et ts=2 sw=2 sts=2 ft=javascript :
